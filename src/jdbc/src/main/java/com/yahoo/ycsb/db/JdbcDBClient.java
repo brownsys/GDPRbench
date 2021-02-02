@@ -22,6 +22,9 @@ import com.yahoo.ycsb.ByteIterator;
 import com.yahoo.ycsb.Status;
 import com.yahoo.ycsb.StringByteIterator;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -279,7 +282,7 @@ public class JdbcDBClient extends DB {
       throws SQLException {
     String read = dbFlavor.createReadMetaStatement(readType, key);
     PreparedStatement readStatement = getShardConnectionByKey(key).prepareStatement(read);
-      return readStatement;
+    return readStatement;
   }
 
   private PreparedStatement createAndCacheDeleteStatement(StatementType deleteType, String key)
@@ -293,7 +296,7 @@ public class JdbcDBClient extends DB {
       throws SQLException {
     String delete = dbFlavor.createDeleteMetaStatement(deleteType, key);
     PreparedStatement deleteStatement = getShardConnectionByKey(key).prepareStatement(delete);
-      return deleteStatement;
+    return deleteStatement;
   }
 
   private PreparedStatement createAndCacheUpdateStatement(StatementType updateType, String key)
@@ -338,6 +341,16 @@ public class JdbcDBClient extends DB {
       }
       readStatement.setString(1, key);
       ResultSet resultSet = readStatement.executeQuery();
+      if (fields == null) {
+        fields = new HashSet<String>();
+        ResultSetMetaData meta = resultSet.getMetaData();
+        for (int j = 0; j < meta.getColumnCount(); j++) {
+          String col = meta.getColumnName(j);
+          if (!col.equals(PRIMARY_KEY)) {
+            fields.add(col);
+          }
+        }
+      }
       if (!resultSet.next()) {
         resultSet.close();
         return Status.NOT_FOUND;
@@ -359,9 +372,8 @@ public class JdbcDBClient extends DB {
   @Override
   public Status readLog(String table, int logcount){
     try {
-      String s = null
+      String s = null;
       String query = null;
-      Process p = null;
       query = "tail -n " + logcount + " /home/audit_logs/audit_dump.xm";
       Process p = Runtime.getRuntime().exec(query);
       BufferedReader stdInput = new BufferedReader(new
@@ -433,6 +445,16 @@ public class JdbcDBClient extends DB {
       scanStatement.setString(1, startKey);
       scanStatement.setInt(2, recordcount);
       ResultSet resultSet = scanStatement.executeQuery();
+      if (fields == null) {
+        fields = new HashSet<String>();
+        ResultSetMetaData meta = resultSet.getMetaData();
+        for (int j = 0; j < meta.getColumnCount(); j++) {
+          String col = meta.getColumnName(j);
+          if (!col.equals(PRIMARY_KEY)) {
+            fields.add(col);
+          }
+        }
+      }
       for (int i = 0; i < recordcount && resultSet.next(); i++) {
         if (result != null && fields != null) {
           HashMap<String, ByteIterator> values = new HashMap<String, ByteIterator>();
@@ -442,6 +464,9 @@ public class JdbcDBClient extends DB {
           }
           result.add(values);
         }
+      }
+      if (result.size() == 0) {
+        return Status.NOT_FOUND;
       }
       return Status.OK;
     } catch (SQLException e) {
@@ -471,6 +496,9 @@ public class JdbcDBClient extends DB {
       if (result == 1) {
         return Status.OK;
       }
+      if (result == 0) {
+        return Status.NOT_FOUND;
+      }
       return Status.UNEXPECTED_STATE;
     } catch (SQLException e) {
       System.err.println("Error in processing update to table: " + tableName + e);
@@ -485,11 +513,15 @@ public class JdbcDBClient extends DB {
       StatementType type = new StatementType(StatementType.Type.UPDATE, table,
           1, "", getShardIndexByKey(keymatch));
       //System.out.println(type.getFieldString());
-      PreparedStatement updateStatement = createAndCacheUpdateMetaStatement(type,keymatch);
+      PreparedStatement updateStatement = createAndCacheUpdateMetaStatement(type, keymatch);
       //updateStatement.setString(1,keymatch);
       int result = updateStatement.executeUpdate();
       //System.err.println("UpdateMeta statement "+updateStatement+" Result "+result);
-      return Status.OK;
+      if (result > 0) {
+        return Status.OK;
+      } else {
+        return Status.NOT_FOUND;
+      }
     } catch(SQLException e) {
       System.err.println("Error in processing update to table: " + table + e);
       e.printStackTrace();
@@ -580,6 +612,10 @@ public class JdbcDBClient extends DB {
       if (result == 1) {
         return Status.OK;
       }
+      if (result == 0) {
+        return Status.NOT_FOUND;
+      }
+      // System.out.println(result);
       return Status.UNEXPECTED_STATE;
     } catch (SQLException e) {
       System.err.println("Error in processing delete to table: " + tableName + e);
@@ -594,7 +630,11 @@ public class JdbcDBClient extends DB {
       PreparedStatement deleteStatement = createAndCacheDeleteMetaStatement(type, keymatch);
       int result = deleteStatement.executeUpdate();
       //System.err.println("DeleteMeta Jdbc key "+keymatch+ "result "+ result);
+      if (result > 0) {
         return Status.OK;
+      } else {
+        return Status.NOT_FOUND;
+      }
     } catch (SQLException e) {
       System.err.println("Error in processing delete to table: " + table + e);
       return Status.ERROR;
@@ -625,6 +665,7 @@ public class JdbcDBClient extends DB {
   @Override
   public Status insertTTL(String table, String key,
                          Map<String, ByteIterator> values, int ttl) {
-   return Status.OK;
+    return this.insert(table, key, values);
+    // return Status.OK;
   }
 }

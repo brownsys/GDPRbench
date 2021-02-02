@@ -30,14 +30,14 @@ public class DefaultDBFlavor extends DBFlavor {
   public DefaultDBFlavor() {
     super(DBName.DEFAULT);
   }
-  Random rand = new Random();
+  private Random rand = new Random();
   public DefaultDBFlavor(DBName dbName) {
     super(dbName);
   }
 
-  ArrayList<String> purpose = new ArrayList<String>(
-      Arrays.asList("ads", "2fa", "msg", "backup","random1", "random2", "random3", "random4", "random5", "random6"));
-  ArrayList<String> Dec = new ArrayList<>(
+  private ArrayList<String> purpose = new ArrayList<String>(
+      Arrays.asList("ads", "2fa", "msg", "backup", "random1", "random2", "random3", "random4", "random5", "random6"));
+  private ArrayList<String> dec = new ArrayList<>(
       Arrays.asList("allow", "disallow", "inform"));
 
   @Override
@@ -70,7 +70,7 @@ public class DefaultDBFlavor extends DBFlavor {
     StringBuilder read = new StringBuilder("SELECT * FROM ");
     read.append(readType.getTableName());
     read.append(" WHERE ");
-    read.append("field0");
+    read.append("PUR");
     read.append(" = ");
     read.append("'");
     read.append(purpose.get(rand.nextInt(purpose.size())));
@@ -96,7 +96,7 @@ public class DefaultDBFlavor extends DBFlavor {
     StringBuilder delete = new StringBuilder("DELETE FROM ");
     delete.append(deleteType.getTableName());
     delete.append(" WHERE ");
-    delete.append("field0");
+    delete.append("PUR");
     delete.append(" = ");
     delete.append("'");
     delete.append(purpose.get(rand.nextInt(purpose.size())));
@@ -130,13 +130,13 @@ public class DefaultDBFlavor extends DBFlavor {
     StringBuilder update = new StringBuilder("UPDATE ");
     update.append(updateType.getTableName());
     update.append(" SET ");
-    update.append("field4");
+    update.append("OBJ");
     update.append(" = ");
     update.append("'");
-    update.append(Dec.get(rand.nextInt(Dec.size())));
+    update.append(dec.get(rand.nextInt(dec.size())));
     update.append("'");
     update.append(" WHERE ");
-    update.append("field0");
+    update.append("PUR");
     update.append(" = ");
     update.append("'");
     update.append(purpose.get(rand.nextInt(purpose.size())));
