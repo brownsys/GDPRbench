@@ -105,6 +105,8 @@ DATABASES = {
     "solr"         : "com.yahoo.ycsb.db.solr.SolrClient",
     "solr6"        : "com.yahoo.ycsb.db.solr6.SolrClient",
     "tarantool"    : "com.yahoo.ycsb.db.TarantoolClient",
+    "sqlite"       : "com.yahoo.ycsb.db.SQLiteClient",
+    "pelton"       : "com.yahoo.ycsb.db.PeltonClient"
 }
 
 OPTIONS = {
@@ -332,7 +334,7 @@ def main():
         ycsb_command.append(command)
     print >> sys.stderr, " ".join(ycsb_command)
     try:
-        return subprocess.call(ycsb_command)
+        return subprocess.call(ycsb_command, stdout=sys.stdout, stderr=sys.stderr)
     except OSError as e:
         if e.errno == errno.ENOENT:
             error('Command failed. Is java installed and on your PATH?')
