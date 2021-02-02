@@ -37,6 +37,7 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,15 +60,13 @@ public class SQLiteClient extends DB {
   public static final String NULL_VALUE = "NULL";
 
   /** SQL for table creation. */
-  public static final String DROP_INDEX_SQL = "DROP INDEX IF EXISTS pur_index;";
-  public static final String DROP_TABLE_SQL = "DROP TABLE IF EXISTS usertable;";
   public static final String CREATE_TABLE_SQL =
-      "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,\n"
+      "CREATE TABLE if not exists usertable(YCSB_KEY VARCHAR PRIMARY KEY,\n"
       + "  DEC VARCHAR, USR VARCHAR,\n" + "  SRC VARCHAR, OBJ VARCHAR,\n"
       + "  CAT VARCHAR, ACL VARCHAR,\n" + "  Data VARCHAR, PUR VARCHAR,\n"
       + "  SHR VARCHAR, TTL VARCHAR);";
   public static final String CREATE_INDEX_SQL =
-      "CREATE INDEX pur_index ON usertable(PUR);";
+      "CREATE INDEX if not exists pur_index ON usertable(PUR);";
   public static final List<String> COLUMNS = Arrays.asList(
       new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
 
@@ -83,11 +82,8 @@ public class SQLiteClient extends DB {
           .getConnection("jdbc:sqlite:" + props.getProperty(DB_NAME_PROPERTY));
       // Drop then create table.
       Statement stmt = this.connection.createStatement();
-      stmt.executeUpdate(DROP_INDEX_SQL);
-      stmt.executeUpdate(DROP_TABLE_SQL);
       stmt.executeUpdate(CREATE_TABLE_SQL);
       stmt.executeUpdate(CREATE_INDEX_SQL);
-      System.out.println("table " + TABLE_NAME + " created!");
     } catch (ClassNotFoundException e) {
       throw new DBException("Class not found", e);
     } catch (SQLException e) {
@@ -118,9 +114,10 @@ public class SQLiteClient extends DB {
     try {
       Statement stmt = this.connection.createStatement();
       ResultSet output = stmt.executeQuery(builder.toString());
-      if (result != null && fields != null) {
+      Collection<String> cols = fields != null ? fields : COLUMNS;
+      if (result != null) {
         while (output.next()) {
-          for (String field : fields) {
+          for (String field : cols) {
             String value = output.getString(field);
             result.put(field, new StringByteIterator(value));
           }
@@ -223,12 +220,15 @@ public class SQLiteClient extends DB {
       int result = stmt.executeUpdate(builder.toString());
       if (result == 1) {
         return Status.OK;
+      } else if (result == 0) {
+        return Status.NOT_FOUND;
+      } else {
+        return Status.UNEXPECTED_STATE;        
       }
     } catch (SQLException e) {
       e.printStackTrace();
       return Status.ERROR;
     }
-    return Status.UNEXPECTED_STATE;
   }
 
   @Override
@@ -251,8 +251,11 @@ public class SQLiteClient extends DB {
 
     try {
       Statement stmt = this.connection.createStatement();
-      int result = stmt.executeUpdate(builder.toString());
-      return Status.OK;
+      if (stmt.executeUpdate(builder.toString()) > 0) {
+        return Status.OK;
+      } else {
+        return Status.NOT_FOUND;
+      }
     } catch (SQLException e) {
       e.printStackTrace();
       return Status.ERROR;
@@ -261,7 +264,7 @@ public class SQLiteClient extends DB {
 
   @Override
   public Status update(String table, String key, Map<String, ByteIterator> values) {
-    StringBuilder builder = new StringBuilder("UPDAET ");
+    StringBuilder builder = new StringBuilder("UPDATE ");
     builder.append(table);
     builder.append(" SET ");
     for (Map.Entry<String, ByteIterator> e : values.entrySet()) {
@@ -279,14 +282,18 @@ public class SQLiteClient extends DB {
 
     try {
       Statement stmt = this.connection.createStatement();
-      if (stmt.executeUpdate(builder.toString()) == 1) {
+      int result = stmt.executeUpdate(builder.toString());
+      if (result == 1) {
         return Status.OK;
+      } else if (result == 0) {
+        return Status.NOT_FOUND;
+      } else {
+        return Status.UNEXPECTED_STATE;        
       }
     } catch (SQLException e) {
       e.printStackTrace();
       return Status.ERROR;
     }
-    return Status.UNEXPECTED_STATE;
   }
 
   @Override
@@ -314,8 +321,11 @@ public class SQLiteClient extends DB {
 
     try {
       Statement stmt = this.connection.createStatement();
-      stmt.executeUpdate(builder.toString());
-      return Status.OK;
+      if (stmt.executeUpdate(builder.toString()) > 0) {
+        return Status.OK;
+      } else {
+        return Status.NOT_FOUND;
+      }
     } catch (SQLException e) {
       e.printStackTrace();
       return Status.ERROR;
@@ -325,6 +335,35 @@ public class SQLiteClient extends DB {
   @Override
   public Status scan(String table, String startkey, int recordcount, Set<String> fields,
       Vector<HashMap<String, ByteIterator>> result) {
+    StringBuilder builder = new StringBuilder("SELECT * FROM ");
+    builder.append(TABLE_NAME);
+    builder.append(" WHERE ");
+    builder.append(PRIMARY_KEY);
+    builder.append(">=\"");
+    builder.append(startkey);
+    builder.append("\" ORDER BY ");
+    builder.append(PRIMARY_KEY);
+    builder.append(" LIMIT ");
+    builder.append(recordcount);
+
+    try {
+      Statement stmt = this.connection.createStatement();
+      ResultSet output = stmt.executeQuery(builder.toString());
+      while (output.next()) {
+        HashMap<String, ByteIterator> values = new HashMap<String, ByteIterator>();
+        for (String col : COLUMNS) {
+          values.put(col,  new StringByteIterator(output.getString(col)));
+        }
+        result.add(values);
+      }
+      output.close();
+    } catch (SQLException e) {
+      e.printStackTrace();
+      return Status.ERROR;
+    }
+    if (result.size() == 0) {
+      return Status.NOT_FOUND;
+    }
     return Status.OK;
   }
 
