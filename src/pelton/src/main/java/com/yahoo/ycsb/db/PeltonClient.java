@@ -28,6 +28,7 @@ import com.yahoo.ycsb.ByteIterator;
 import com.yahoo.ycsb.DB;
 import com.yahoo.ycsb.DBException;
 import com.yahoo.ycsb.Status;
+import edu.brown.pelton.PeltonJNI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +39,7 @@ import java.util.Vector;
  */
 public class PeltonClient extends DB {
   public void init() throws DBException {
+    new PeltonJNI().sayHello();
   }
 
   public void cleanup() throws DBException {

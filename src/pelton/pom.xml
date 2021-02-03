@@ -36,5 +36,12 @@ LICENSE file.
       <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+     <groupId>peltonjni</groupId>
+     <artifactId>peltonjni</artifactId>
+     <scope>system</scope>
+     <version>1.0</version>
+     <systemPath>${basedir}/../../../../bazel-bin/jni/libPeltonJNI.jar</systemPath>
+   </dependency>
   </dependencies>
 </project>
