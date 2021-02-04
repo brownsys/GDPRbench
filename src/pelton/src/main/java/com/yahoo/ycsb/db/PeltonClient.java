@@ -28,9 +28,15 @@ import com.yahoo.ycsb.ByteIterator;
 import com.yahoo.ycsb.DB;
 import com.yahoo.ycsb.DBException;
 import com.yahoo.ycsb.Status;
+
 import edu.brown.pelton.PeltonJNI;
+
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
 
@@ -38,82 +44,249 @@ import java.util.Vector;
  * YCSB binding for Pelton.
  */
 public class PeltonClient extends DB {
+  /** Name of database (and DB file). */
+  public static final String DB_DIR_PROPERTY = "pelton.dbdir";
+  /** Table schema configuration. */
+  public static final String TABLE_NAME = "usertable";
+  public static final String PRIMARY_KEY = "YCSB_KEY";
+  public static final String METADATA_COLUMN = "PUR";
+
+  /** SQL for table creation. */
+  public static final String CREATE_TABLE_SQL =
+      "CREATE TABLE if not exists usertable(YCSB_KEY VARCHAR PRIMARY KEY,\n"
+      + "  DEC VARCHAR, USR VARCHAR,\n" + "  SRC VARCHAR, OBJ VARCHAR,\n"
+      + "  CAT VARCHAR, ACL VARCHAR,\n" + "  Data VARCHAR, PUR VARCHAR,\n"
+      + "  SHR VARCHAR, TTL VARCHAR);";
+  public static final String CREATE_INDEX_SQL =
+      "CREATE INDEX if not exists pur_index ON usertable(PUR);";
+  public static final List<String> COLUMNS = Arrays.asList(
+      new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
+
+  private PeltonJNI pelton;
+
   public void init() throws DBException {
-    new PeltonJNI().sayHello();
+    Properties props = getProperties();
+    this.pelton = new PeltonJNI(props.getProperty(DB_DIR_PROPERTY));
   }
 
   public void cleanup() throws DBException {
+    this.pelton.Close();
   }
-
-  /*
-   * Calculate a hash for a key to store it in an index. The actual return value
-   * of this function is not interesting -- it primarily needs to be fast and
-   * scattered along the whole space of doubles. In a real world scenario one
-   * would probably use the ASCII values of the keys.
-   */
-  @SuppressWarnings("unused")
-  private double hash(String key) {
-    return key.hashCode();
-  }
-
-  // XXX jedis.select(int index) to switch to `table`
 
   @Override
   public Status read(String table, String key, Set<String> fields,
       Map<String, ByteIterator> result) {
-    return Status.ERROR;
+    StringBuilder builder = new StringBuilder("SELECT * FROM ");
+    builder.append(TABLE_NAME);
+    builder.append(" WHERE ");
+    builder.append(PRIMARY_KEY);
+    builder.append("=\"");
+    builder.append(key);
+    builder.append("\";");
+
+    String[][] output = this.pelton.ExecuteQuery(builder.toString());
+    Collection<String> cols = fields != null ? fields : COLUMNS;
+    if (result != null && output != null) {
+      // TODO: Put values.
+      return cols != null ? Status.OK : Status.ERROR;
+    }
+    if (result.size() == 0) {
+      return Status.NOT_FOUND;
+    }
+    if (result.size() > 1) {
+      return Status.UNEXPECTED_STATE;
+    }
+    return Status.OK;
   }
 
   @Override
   public Status readMeta(String table, String cond, String keymatch,
       Vector<HashMap<String, ByteIterator>> result) {
-    return Status.ERROR;
+    if (!keymatch.equals("user*")) {
+      System.out.println("Update meta error " + keymatch);
+      return Status.ERROR;
+    }
+    if (!cond.startsWith(METADATA_COLUMN)) {
+      System.out.println("Update meta condition error " + cond);
+      return Status.ERROR;
+    }
+    StringBuilder builder = new StringBuilder("SELECT * FROM ");
+    builder.append(TABLE_NAME);
+    builder.append(" WHERE ");
+    builder.append(METADATA_COLUMN);
+    builder.append("=\"");
+    builder.append(cond);
+    builder.append("\";");
+    
+    String[][] output = this.pelton.ExecuteQuery(builder.toString());
+    if (output != null) {
+      // TODO: Set values.
+    }
+    if (result.size() == 0) {
+      return Status.NOT_FOUND;
+    }
+    return Status.OK;
   }
 
   @Override
   public Status insert(String table, String key, Map<String, ByteIterator> values) {
-    return Status.ERROR;
+    StringBuilder builder = new StringBuilder("INSERT INTO ");
+    builder.append(table);
+    builder.append(" VALUES(\"");
+    builder.append(key);
+    builder.append("\"");
+    for (String col : COLUMNS) {
+      builder.append(",\"");
+      builder.append(values.get(col).toString());
+      builder.append("\"");
+    }
+    builder.append(");");
+    
+    if (this.pelton.ExecuteUpdate(builder.toString()) == 1) {
+      return Status.OK;
+    }
+    return Status.UNEXPECTED_STATE;
   }
 
   @Override
   public Status insertTTL(String table, String key, Map<String, ByteIterator> values, int ttl) {
-    return Status.ERROR;
+    return this.insert(table, key, values);
   }
 
   @Override
   public Status delete(String table, String key) {
-    return Status.ERROR;
+    StringBuilder builder = new StringBuilder("DELETE FROM ");
+    builder.append(table);
+    builder.append(" WHERE ");
+    builder.append(PRIMARY_KEY);
+    builder.append("=\"");
+    builder.append(key);
+    builder.append("\";");
+
+    int result = this.pelton.ExecuteUpdate(builder.toString());
+    if (result == 1) {
+      return Status.OK;
+    } else if (result == 0) {
+      return Status.NOT_FOUND;
+    } else {
+      return Status.UNEXPECTED_STATE;        
+    }
   }
 
   @Override
   public Status deleteMeta(String table, String condition, String keymatch) {
-    return Status.ERROR;
+    if (!keymatch.equals("user*")) {
+      System.out.println("Update meta error " + keymatch);
+      return Status.ERROR;
+    }
+    if (!condition.startsWith(METADATA_COLUMN)) {
+      System.out.println("Update meta condition error " + condition);
+      return Status.ERROR;
+    }
+    StringBuilder builder = new StringBuilder("DELETE FROM ");
+    builder.append(table);
+    builder.append(" WHERE ");
+    builder.append(METADATA_COLUMN);
+    builder.append("=\"");
+    builder.append(condition);
+    builder.append("\";");
+
+    if (this.pelton.ExecuteUpdate(builder.toString()) > 0) {
+      return Status.OK;
+    }
+    return Status.NOT_FOUND;
   }
 
   @Override
   public Status update(String table, String key, Map<String, ByteIterator> values) {
-    return Status.ERROR;
+    StringBuilder builder = new StringBuilder("UPDATE ");
+    builder.append(table);
+    builder.append(" SET ");
+    for (Map.Entry<String, ByteIterator> e : values.entrySet()) {
+      builder.append(e.getKey());
+      builder.append("=\"");
+      builder.append(e.getValue());
+      builder.append("\",");
+    }
+    builder.deleteCharAt(builder.length() - 1);
+    builder.append(" WHERE ");
+    builder.append(PRIMARY_KEY);
+    builder.append("=\"");
+    builder.append(key);
+    builder.append("\";");
+
+    int result = this.pelton.ExecuteUpdate(builder.toString());
+    if (result == 1) {
+      return Status.OK;
+    } else if (result == 0) {
+      return Status.NOT_FOUND;
+    } else {
+      return Status.UNEXPECTED_STATE;        
+    }
   }
 
   @Override
   public Status updateMeta(String table, String condition, String keymatch, String fieldname,
       String metadatavalue) {
-    return Status.ERROR;
+    if (!keymatch.equals("user*")) {
+      System.out.println("Update meta error " + keymatch);
+      return Status.ERROR;
+    }
+    if (!condition.startsWith(METADATA_COLUMN)) {
+      System.out.println("Update meta condition error " + condition);
+      return Status.ERROR;
+    }
+    StringBuilder builder = new StringBuilder("UPDATE ");
+    builder.append(table);
+    builder.append(" SET ");
+    builder.append(fieldname);
+    builder.append("=\"");
+    builder.append(metadatavalue);
+    builder.append("\" WHERE ");
+    builder.append(METADATA_COLUMN);
+    builder.append("=\"");
+    builder.append(condition);
+    builder.append("\";");
+
+    if (this.pelton.ExecuteUpdate(builder.toString()) > 0) {
+      return Status.OK;
+    }
+    return Status.NOT_FOUND;
   }
 
   @Override
   public Status scan(String table, String startkey, int recordcount, Set<String> fields,
       Vector<HashMap<String, ByteIterator>> result) {
-    return Status.ERROR;
+    StringBuilder builder = new StringBuilder("SELECT * FROM ");
+    builder.append(TABLE_NAME);
+    builder.append(" WHERE ");
+    builder.append(PRIMARY_KEY);
+    builder.append(">=\"");
+    builder.append(startkey);
+    builder.append("\" ORDER BY ");
+    builder.append(PRIMARY_KEY);
+    builder.append(" LIMIT ");
+    builder.append(recordcount);
+
+    String[][] output = this.pelton.ExecuteQuery(builder.toString());
+    Collection<String> cols = fields != null ? fields : COLUMNS;
+    if (result != null && output != null) {
+      // TODO: Put values.
+      return cols != null ? Status.OK : Status.ERROR;
+    }
+    if (result.size() == 0) {
+      return Status.NOT_FOUND;
+    }
+    return Status.OK;
   }
 
   @Override
   public Status verifyTTL(String table, long recordcount) {
-    return Status.ERROR;
+    return Status.OK;
   }
 
   @Override
   public Status readLog(String table, int logcount) {
-    return Status.ERROR;
+    return Status.OK;
   }
 }
