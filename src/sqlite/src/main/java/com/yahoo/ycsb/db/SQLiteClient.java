@@ -55,9 +55,6 @@ public class SQLiteClient extends DB {
   public static final String TABLE_NAME = "usertable";
   public static final String PRIMARY_KEY = "YCSB_KEY";
   public static final String METADATA_COLUMN = "PUR";
-  public static final int FIELD_COUNT = 10;
-  public static final String COLUMN_PREFIX = "FIELD";
-  public static final String NULL_VALUE = "NULL";
 
   /** SQL for table creation. */
   public static final String CREATE_TABLE_SQL =
@@ -130,6 +127,9 @@ public class SQLiteClient extends DB {
     }
     if (result.size() == 0) {
       return Status.NOT_FOUND;
+    }
+    if (result.size() > 1) {
+      return Status.UNEXPECTED_STATE;
     }
     return Status.OK;
   }
@@ -349,9 +349,10 @@ public class SQLiteClient extends DB {
     try {
       Statement stmt = this.connection.createStatement();
       ResultSet output = stmt.executeQuery(builder.toString());
+      Collection<String> cols = fields != null ? fields : COLUMNS;
       while (output.next()) {
         HashMap<String, ByteIterator> values = new HashMap<String, ByteIterator>();
-        for (String col : COLUMNS) {
+        for (String col : cols) {
           values.put(col,  new StringByteIterator(output.getString(col)));
         }
         result.add(values);
