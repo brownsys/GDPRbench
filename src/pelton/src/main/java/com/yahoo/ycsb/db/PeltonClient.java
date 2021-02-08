@@ -54,11 +54,20 @@ public class PeltonClient extends DB {
   public static final String METADATA_COLUMN = "PUR";
 
   /** SQL for table creation. */
-  public static final String CREATE_TABLE_SQL =
-      "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,\n"
-      + "  DEC VARCHAR, USR VARCHAR,\n" + "  SRC VARCHAR, OBJ VARCHAR,\n"
-      + "  CAT VARCHAR, ACL VARCHAR,\n" + "  Data VARCHAR, PUR VARCHAR,\n"
-      + "  SHR VARCHAR, TTL VARCHAR);";
+  public static final String[] CREATE_TABLE_SQL = new String[] {
+      "CREATE TABLE main(ID VARCHAR PRIMARY KEY, PII_attr VARCHAR);",
+      "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,"
+        + " DEC VARCHAR, USR VARCHAR, SRC VARCHAR, OBJ VARCHAR,"
+        + " CAT VARCHAR, ACL VARCHAR, Data VARCHAR, PUR VARCHAR,"
+        + " SHR VARCHAR, TTL VARCHAR, FOREIGN KEY(PUR) REFERENCES main(ID));",
+      "INSERT INTO main VALUES ('PUR=ads++++++++++++++++++++++++++++++++++++++++++++"
+        + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'ads');",
+      "INSERT INTO main VALUES ('PUR=2fa++++++++++++++++++++++++++++++++++++++++++++"
+        + "+++++++++++++++++++++++++++++++++++++++++++++++++', '2fa');",
+      "INSERT INTO main VALUES ('PUR=msg++++++++++++++++++++++++++++++++++++++++++++"
+        + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'msg');",
+      "INSERT INTO main VALUES ('PUR=backup+++++++++++++++++++++++++++++++++++++++++"
+        + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'backup');"};
   public static final List<String> COLUMNS = Arrays.asList(
       new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
 
@@ -67,11 +76,21 @@ public class PeltonClient extends DB {
   public void init() throws DBException {
     Properties props = getProperties();
     this.pelton = new PeltonJNI(props.getProperty(DB_DIR_PROPERTY));
-    System.out.println("Table created ..." + this.pelton.ExecuteDDL(CREATE_TABLE_SQL));
+
+    if (this.pelton.ExecuteDDL(CREATE_TABLE_SQL[0])) {
+      for (int i = 1; i < CREATE_TABLE_SQL.length; i++) {
+        if (!this.pelton.ExecuteDDL(CREATE_TABLE_SQL[i])) {
+          throw new DBException("Statement failed:\n" + CREATE_TABLE_SQL[i]);
+        }
+      }
+    }
+
+    System.out.println("Pelton Initialized...");
   }
 
   public void cleanup() throws DBException {
     this.pelton.Close();
+    System.out.println("Pelton Closed...");
   }
   
   private HashMap<String, Integer> mapColumns(String[] order) {
