@@ -106,7 +106,8 @@ DATABASES = {
     "solr6"        : "com.yahoo.ycsb.db.solr6.SolrClient",
     "tarantool"    : "com.yahoo.ycsb.db.TarantoolClient",
     "sqlite"       : "com.yahoo.ycsb.db.SQLiteClient",
-    "pelton"       : "com.yahoo.ycsb.db.PeltonClient"
+    "pelton"       : "com.yahoo.ycsb.db.PeltonClient",
+    "tracefile"    : "com.yahoo.ycsb.db.TraceFileClient"
 }
 
 OPTIONS = {
