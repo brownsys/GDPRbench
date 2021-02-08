@@ -85,7 +85,7 @@ public class PeltonClient extends DB {
   @Override
   public Status read(String table, String key, Set<String> fields,
       Map<String, ByteIterator> result) {
-    System.out.println("read");
+    // System.out.println("read");
     StringBuilder builder = new StringBuilder("SELECT * FROM ");
     builder.append(TABLE_NAME);
     builder.append(" WHERE ");
@@ -97,9 +97,6 @@ public class PeltonClient extends DB {
     ArrayList<String[]> output = this.pelton.ExecuteQuery(builder.toString());
     if (output == null) {
       return Status.ERROR;
-    }
-    for (String[] a : output) {
-      System.out.println(Arrays.toString(a));
     }
     if (output.size() < 2) {
       return Status.NOT_FOUND;
@@ -120,7 +117,7 @@ public class PeltonClient extends DB {
   @Override
   public Status readMeta(String table, String cond, String keymatch,
       Vector<HashMap<String, ByteIterator>> result) {
-    System.out.println("readMeta");
+    // System.out.println("readMeta");
     if (!keymatch.equals("user*")) {
       System.out.println("Update meta error " + keymatch);
       return Status.ERROR;
@@ -141,9 +138,6 @@ public class PeltonClient extends DB {
     if (output == null) {
       return Status.ERROR;
     }
-    for (String[] a : output) {
-      System.out.println(Arrays.toString(a));
-    }
     if (output.size() < 2) {
       return Status.NOT_FOUND;
     }
@@ -162,7 +156,7 @@ public class PeltonClient extends DB {
 
   @Override
   public Status insert(String table, String key, Map<String, ByteIterator> values) {
-    System.out.println("insert");
+    // System.out.println("insert");
     StringBuilder builder = new StringBuilder("INSERT INTO ");
     builder.append(table);
     builder.append(" VALUES('");
@@ -188,7 +182,7 @@ public class PeltonClient extends DB {
 
   @Override
   public Status delete(String table, String key) {
-    System.out.println("delete");
+    // System.out.println("delete");
     StringBuilder builder = new StringBuilder("DELETE FROM ");
     builder.append(table);
     builder.append(" WHERE ");
@@ -209,7 +203,7 @@ public class PeltonClient extends DB {
 
   @Override
   public Status deleteMeta(String table, String condition, String keymatch) {
-    System.out.println("deleteMeta");
+    // System.out.println("deleteMeta");
     if (!keymatch.equals("user*")) {
       System.out.println("Update meta error " + keymatch);
       return Status.ERROR;
@@ -234,7 +228,7 @@ public class PeltonClient extends DB {
 
   @Override
   public Status update(String table, String key, Map<String, ByteIterator> values) {
-    System.out.println("update");
+    // System.out.println("update");
     StringBuilder builder = new StringBuilder("UPDATE ");
     builder.append(table);
     builder.append(" SET ");
@@ -264,7 +258,7 @@ public class PeltonClient extends DB {
   @Override
   public Status updateMeta(String table, String condition, String keymatch, String fieldname,
       String metadatavalue) {
-    System.out.println("updateMeta");
+    // System.out.println("updateMeta");
     if (!keymatch.equals("user*")) {
       System.out.println("Update meta error " + keymatch);
       return Status.ERROR;
@@ -294,7 +288,7 @@ public class PeltonClient extends DB {
   @Override
   public Status scan(String table, String startkey, int recordcount, Set<String> fields,
       Vector<HashMap<String, ByteIterator>> result) {
-    System.out.println("scan");
+    // System.out.println("scan");
     StringBuilder builder = new StringBuilder("SELECT * FROM ");
     builder.append(TABLE_NAME);
     builder.append(" WHERE ");
