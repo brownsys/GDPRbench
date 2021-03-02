@@ -276,6 +276,7 @@ public class TraceFileClient extends DB {
     builder.append(PRIMARY_KEY);
     builder.append(" LIMIT ");
     builder.append(recordcount);
+    builder.append(";");
     this.writer.println(builder.toString());
     return Status.OK;
   }

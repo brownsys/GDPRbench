@@ -345,6 +345,7 @@ public class SQLiteClient extends DB {
     builder.append(PRIMARY_KEY);
     builder.append(" LIMIT ");
     builder.append(recordcount);
+    builder.append(";");
 
     try {
       Statement stmt = this.connection.createStatement();

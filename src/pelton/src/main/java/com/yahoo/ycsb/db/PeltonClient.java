@@ -318,6 +318,7 @@ public class PeltonClient extends DB {
     builder.append(PRIMARY_KEY);
     builder.append(" LIMIT ");
     builder.append(recordcount);
+    builder.append(";");
 
     ArrayList<String[]> output = this.pelton.ExecuteQuery(builder.toString());
     if (output == null) {
