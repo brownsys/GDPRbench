@@ -52,6 +52,7 @@ public class TraceFileClient extends DB {
   public static final String TABLE_NAME = "usertable";
   public static final String PRIMARY_KEY = "YCSB_KEY";
   public static final String METADATA_COLUMN = "PUR";
+  public static final String SCAN_VIEW = "scan_view";
 
   /** SQL for table creation. */
   public static final String CREATE_TABLE_SQL_NONSHARDING =
@@ -63,8 +64,7 @@ public class TraceFileClient extends DB {
       + "CREATE INDEX if not exists pur_index ON usertable(PUR);\n";
 
   public static final String CREATE_TABLE_SQL_SHARDING =
-      "SET echo;"
-      + "\n"
+      "SET echo;\n"
       + "CREATE TABLE main(ID VARCHAR PRIMARY KEY, PII_attr VARCHAR);\n"
       + "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,"
       + " DEC VARCHAR, USR VARCHAR, SRC VARCHAR, OBJ VARCHAR,"
@@ -79,6 +79,10 @@ public class TraceFileClient extends DB {
       + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'msg');\n"
       + "INSERT INTO main VALUES ('PUR=backup+++++++++++++++++++++++++++++++++++++++++"
       + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'backup');";
+
+  public static final String CREATE_VIEW_SQL_SHARDING =
+      "CREATE VIEW scan_view AS "
+      + "'\"SELECT * FROM usertable ORDER BY YCSB_KEY LIMIT ?\"';";
   
   public static final List<String> COLUMNS = Arrays.asList(
       new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
@@ -107,6 +111,7 @@ public class TraceFileClient extends DB {
     if (!this.append) {
       if (this.sharding) { 
         this.writer.println(CREATE_TABLE_SQL_SHARDING);
+        this.writer.println(CREATE_VIEW_SQL_SHARDING);
       } else {
         this.writer.println(CREATE_TABLE_SQL_NONSHARDING);
       }
@@ -267,13 +272,16 @@ public class TraceFileClient extends DB {
   public Status scan(String table, String startkey, int recordcount, Set<String> fields,
       Vector<HashMap<String, ByteIterator>> result) {
     StringBuilder builder = new StringBuilder("SELECT * FROM ");
-    builder.append(TABLE_NAME);
+    builder.append(this.sharding ? SCAN_VIEW : TABLE_NAME);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append(">='");
+    builder.append(">'");
     builder.append(startkey);
-    builder.append("' ORDER BY ");
-    builder.append(PRIMARY_KEY);
+    builder.append("'");
+    if (!this.sharding) {
+      builder.append(" ORDER BY ");
+      builder.append(PRIMARY_KEY);
+    }
     builder.append(" LIMIT ");
     builder.append(recordcount);
     builder.append(";");
