@@ -7,5 +7,5 @@ rm -rf peltondb
 mkdir peltondb
 
 #mvn clean package
-./bin/ycsb -jvm-args="-Djava.library.path=${DIR}/../../../bazel-bin/jni" load pelton -s -P workloads/gdpr_controller -p pelton.dbdir=peltondb
-./bin/ycsb -jvm-args="-Djava.library.path=${DIR}/../../../bazel-bin/jni" run pelton -s -P workloads/gdpr_controller -p pelton.dbdir=peltondb
+./bin/ycsb -jvm-args="-Djava.library.path=${DIR}/../../../bazel-bin/jni" load pelton -s -P workloads/gdpr_all -p pelton.dbdir=peltondb
+./bin/ycsb -jvm-args="-Djava.library.path=${DIR}/../../../bazel-bin/jni" run pelton -s -P workloads/gdpr_all -p pelton.dbdir=peltondb

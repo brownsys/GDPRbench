@@ -52,6 +52,7 @@ public class PeltonClient extends DB {
   public static final String TABLE_NAME = "usertable";
   public static final String PRIMARY_KEY = "YCSB_KEY";
   public static final String METADATA_COLUMN = "PUR";
+  public static final String SCAN_VIEW = "scan_view";
 
   /** SQL for table creation. */
   public static final String[] CREATE_TABLE_SQL = new String[] {
@@ -67,7 +68,8 @@ public class PeltonClient extends DB {
       "INSERT INTO main VALUES ('PUR=msg++++++++++++++++++++++++++++++++++++++++++++"
         + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'msg');",
       "INSERT INTO main VALUES ('PUR=backup+++++++++++++++++++++++++++++++++++++++++"
-        + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'backup');"};
+        + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'backup');",
+      "CREATE VIEW scan_view AS '\"SELECT * FROM usertable ORDER BY YCSB_KEY LIMIT ?\"';"};
   public static final List<String> COLUMNS = Arrays.asList(
       new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
 
@@ -309,13 +311,11 @@ public class PeltonClient extends DB {
       Vector<HashMap<String, ByteIterator>> result) {
     // System.out.println("scan");
     StringBuilder builder = new StringBuilder("SELECT * FROM ");
-    builder.append(TABLE_NAME);
+    builder.append(SCAN_VIEW);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append(">='");
+    builder.append(">'");
     builder.append(startkey);
-    builder.append("' ORDER BY ");
-    builder.append(PRIMARY_KEY);
     builder.append(" LIMIT ");
     builder.append(recordcount);
     builder.append(";");

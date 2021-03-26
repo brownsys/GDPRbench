@@ -105,9 +105,9 @@ public class SQLiteClient extends DB {
     builder.append(TABLE_NAME);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append("=\"");
+    builder.append("='");
     builder.append(key);
-    builder.append("\";");
+    builder.append("';");
     try {
       Statement stmt = this.connection.createStatement();
       ResultSet output = stmt.executeQuery(builder.toString());
@@ -149,9 +149,9 @@ public class SQLiteClient extends DB {
     builder.append(TABLE_NAME);
     builder.append(" WHERE ");
     builder.append(METADATA_COLUMN);
-    builder.append("=\"");
+    builder.append("='");
     builder.append(cond);
-    builder.append("\";");
+    builder.append("';");
 
     try {
       Statement stmt = this.connection.createStatement();
@@ -178,13 +178,13 @@ public class SQLiteClient extends DB {
   public Status insert(String table, String key, Map<String, ByteIterator> values) {
     StringBuilder builder = new StringBuilder("INSERT INTO ");
     builder.append(table);
-    builder.append(" VALUES(\"");
+    builder.append(" VALUES('");
     builder.append(key);
-    builder.append("\"");
+    builder.append("'");
     for (String col : COLUMNS) {
-      builder.append(",\"");
+      builder.append(",'");
       builder.append(values.get(col).toString());
-      builder.append("\"");
+      builder.append("'");
     }
     builder.append(");");
     
@@ -211,9 +211,9 @@ public class SQLiteClient extends DB {
     builder.append(table);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append("=\"");
+    builder.append("='");
     builder.append(key);
-    builder.append("\";");
+    builder.append("';");
 
     try {
       Statement stmt = this.connection.createStatement();
@@ -245,9 +245,9 @@ public class SQLiteClient extends DB {
     builder.append(table);
     builder.append(" WHERE ");
     builder.append(METADATA_COLUMN);
-    builder.append("=\"");
+    builder.append("='");
     builder.append(condition);
-    builder.append("\";");
+    builder.append("';");
 
     try {
       Statement stmt = this.connection.createStatement();
@@ -269,16 +269,16 @@ public class SQLiteClient extends DB {
     builder.append(" SET ");
     for (Map.Entry<String, ByteIterator> e : values.entrySet()) {
       builder.append(e.getKey());
-      builder.append("=\"");
+      builder.append("='");
       builder.append(e.getValue());
-      builder.append("\",");
+      builder.append("',");
     }
     builder.deleteCharAt(builder.length() - 1);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append("=\"");
+    builder.append("='");
     builder.append(key);
-    builder.append("\";");
+    builder.append("';");
 
     try {
       Statement stmt = this.connection.createStatement();
@@ -311,13 +311,13 @@ public class SQLiteClient extends DB {
     builder.append(table);
     builder.append(" SET ");
     builder.append(fieldname);
-    builder.append("=\"");
+    builder.append("='");
     builder.append(metadatavalue);
-    builder.append("\" WHERE ");
+    builder.append("' WHERE ");
     builder.append(METADATA_COLUMN);
-    builder.append("=\"");
+    builder.append("='");
     builder.append(condition);
-    builder.append("\";");
+    builder.append("';");
 
     try {
       Statement stmt = this.connection.createStatement();
@@ -339,9 +339,9 @@ public class SQLiteClient extends DB {
     builder.append(TABLE_NAME);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append(">=\"");
+    builder.append(">'");
     builder.append(startkey);
-    builder.append("\" ORDER BY ");
+    builder.append("' ORDER BY ");
     builder.append(PRIMARY_KEY);
     builder.append(" LIMIT ");
     builder.append(recordcount);

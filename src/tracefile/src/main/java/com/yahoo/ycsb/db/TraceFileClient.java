@@ -56,7 +56,8 @@ public class TraceFileClient extends DB {
 
   /** SQL for table creation. */
   public static final String CREATE_TABLE_SQL_NONSHARDING =
-      "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,"
+      ".output |:\n"
+      + "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,"
       + " DEC VARCHAR, USR VARCHAR, SRC VARCHAR, OBJ VARCHAR,"
       + " CAT VARCHAR, ACL VARCHAR, Data VARCHAR, PUR VARCHAR,"
       + " SHR VARCHAR, TTL VARCHAR);"
@@ -64,8 +65,7 @@ public class TraceFileClient extends DB {
       + "CREATE INDEX if not exists pur_index ON usertable(PUR);\n";
 
   public static final String CREATE_TABLE_SQL_SHARDING =
-      "SET echo;\n"
-      + "CREATE TABLE main(ID VARCHAR PRIMARY KEY, PII_attr VARCHAR);\n"
+      "CREATE TABLE main(ID VARCHAR PRIMARY KEY, PII_attr VARCHAR);\n"
       + "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,"
       + " DEC VARCHAR, USR VARCHAR, SRC VARCHAR, OBJ VARCHAR,"
       + " CAT VARCHAR, ACL VARCHAR, Data VARCHAR, PUR VARCHAR,"

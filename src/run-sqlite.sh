@@ -4,8 +4,8 @@ mvn package
 rm -rf gdprbench.db
 
 #mvn clean package
-./bin/ycsb load sqlite -s -P workloads/gdpr_controller -p sqlite.dbname=gdprbench.db
-./bin/ycsb run sqlite -s -P workloads/gdpr_controller -p sqlite.dbname=gdprbench.db
+./bin/ycsb load sqlite -s -P workloads/gdpr_all -p sqlite.dbname=:memory:
+./bin/ycsb run sqlite -s -P workloads/gdpr_all -p sqlite.dbname=:memory:
 
 # Old generic JDBC adapter
 #java -cp "$(find . | grep .jar | awk '{print}' ORS=':')" com.yahoo.ycsb.db.JdbcDBCreateTable -p db.driver=org.sqlite.JDBC -p db.url=jdbc:sqlite:gdprbench.db -n usertable -p db.user=
