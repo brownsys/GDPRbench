@@ -45,9 +45,9 @@ import java.util.Vector;
  */
 public class TraceFileClient extends DB {
   /** Name of database (and DB file). */
-  public static final String FILE_PATH_PROPERTY = "file.path";
+  public static final String SHARDED_FILE_PATH_PROPERTY = "sharded.path";
+  public static final String UNSHARDED_FILE_PATH_PROPERTY = "unsharded.path";
   public static final String APPEND_PROPERTY = "file.append";
-  public static final String SHARDING_PROPERTY = "file.shard";
   /** Table schema configuration. */
   public static final String TABLE_NAME = "usertable";
   public static final String PRIMARY_KEY = "YCSB_KEY";
@@ -56,20 +56,19 @@ public class TraceFileClient extends DB {
 
   /** SQL for table creation. */
   public static final String CREATE_TABLE_SQL_NONSHARDING =
-      ".output |:\n"
-      + "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,"
-      + " DEC VARCHAR, USR VARCHAR, SRC VARCHAR, OBJ VARCHAR,"
-      + " CAT VARCHAR, ACL VARCHAR, Data VARCHAR, PUR VARCHAR,"
-      + " SHR VARCHAR, TTL VARCHAR);"
+      "CREATE TABLE usertable(YCSB_KEY VARCHAR(100) PRIMARY KEY,"
+      + " `DEC` VARCHAR(100), USR VARCHAR(100), SRC VARCHAR(100), OBJ VARCHAR(100),"
+      + " CAT VARCHAR(100), ACL VARCHAR(100), Data VARCHAR(100), PUR VARCHAR(100),"
+      + " SHR VARCHAR(100), TTL VARCHAR(100));"
       + "\n"
-      + "CREATE INDEX if not exists pur_index ON usertable(PUR);\n";
+      + "CREATE INDEX pur_index ON usertable(PUR);\n";
 
   public static final String CREATE_TABLE_SQL_SHARDING =
-      "CREATE TABLE main(ID VARCHAR PRIMARY KEY, PII_attr VARCHAR);\n"
-      + "CREATE TABLE usertable(YCSB_KEY VARCHAR PRIMARY KEY,"
-      + " DEC VARCHAR, USR VARCHAR, SRC VARCHAR, OBJ VARCHAR,"
-      + " CAT VARCHAR, ACL VARCHAR, Data VARCHAR, PUR VARCHAR,"
-      + " SHR VARCHAR, TTL VARCHAR, FOREIGN KEY(PUR) REFERENCES main(ID));"
+      "CREATE TABLE main(ID VARCHAR(100) PRIMARY KEY, PII_attr VARCHAR(100));\n"
+      + "CREATE TABLE usertable(YCSB_KEY VARCHAR(100) PRIMARY KEY,"
+      + " `DEC` VARCHAR(100), USR VARCHAR(100), SRC VARCHAR(100), OBJ VARCHAR(100),"
+      + " CAT VARCHAR(100), ACL VARCHAR(100), Data VARCHAR(100), PUR VARCHAR(100),"
+      + " SHR VARCHAR(100), TTL VARCHAR(100), FOREIGN KEY(PUR) REFERENCES main(ID));"
       + "\n"
       + "INSERT INTO main VALUES ('PUR=ads++++++++++++++++++++++++++++++++++++++++++++"
       + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'ads');\n"
@@ -87,43 +86,53 @@ public class TraceFileClient extends DB {
   public static final List<String> COLUMNS = Arrays.asList(
       new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
 
-  private FileWriter file;
-  private PrintWriter writer;
+  public static String escapeColumn(String colname) {
+    if (colname.equalsIgnoreCase("DEC")) {
+      return "`DEC`";
+    }
+    return colname;
+  }
+
+  private FileWriter sfile;
+  private PrintWriter swriter;
+  private FileWriter ufile;
+  private PrintWriter uwriter;
   private boolean append;
-  private boolean sharding;
 
   public void init() throws DBException {
     Properties props = getProperties();
-    String filePath = props.getProperty(FILE_PATH_PROPERTY);
+    String sfilePath = props.getProperty(SHARDED_FILE_PATH_PROPERTY);
+    String ufilePath = props.getProperty(UNSHARDED_FILE_PATH_PROPERTY);
     String fileAppend = props.getProperty(APPEND_PROPERTY, "no");
-    String shardingStr = props.getProperty(SHARDING_PROPERTY, "no");
-    
-    this.append = fileAppend.equalsIgnoreCase("yes");
-    this.sharding = shardingStr.equalsIgnoreCase("yes");
-    
+
     try {
-      this.file = new FileWriter(filePath, this.append);
-      this.writer = new PrintWriter(this.file);
+      this.append = fileAppend.equalsIgnoreCase("yes");
+      this.sfile = new FileWriter(sfilePath, this.append);
+      this.swriter = new PrintWriter(this.sfile);
+      this.ufile = new FileWriter(ufilePath, this.append);
+      this.uwriter = new PrintWriter(this.ufile);
     } catch (IOException io) {
       throw new DBException("IO exception raised opening file", io);
     }
     
     if (!this.append) {
-      if (this.sharding) { 
-        this.writer.println(CREATE_TABLE_SQL_SHARDING);
-        this.writer.println(CREATE_VIEW_SQL_SHARDING);
-      } else {
-        this.writer.println(CREATE_TABLE_SQL_NONSHARDING);
-      }
+      // Sharded schema creation.
+      this.swriter.println(CREATE_TABLE_SQL_SHARDING);
+      this.swriter.println(CREATE_VIEW_SQL_SHARDING);
+      // Unsharded schema creation.
+      this.uwriter.println(CREATE_TABLE_SQL_NONSHARDING);
     } else {
-      this.writer.println("# Start of benchmark");
+      this.swriter.println("# Start of benchmark");
+      this.uwriter.println("# Start of benchmark");
     }
   }
 
   public void cleanup() throws DBException {
     try {
-      this.writer.close();
-      this.file.close();
+      this.swriter.close();
+      this.sfile.close();
+      this.uwriter.close();
+      this.ufile.close();
     } catch (IOException io) {
       throw new DBException("IO exception raised closing file", io);
     }
@@ -139,7 +148,8 @@ public class TraceFileClient extends DB {
     builder.append("='");
     builder.append(key);
     builder.append("';");
-    this.writer.println(builder.toString());
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
   }
 
@@ -161,7 +171,8 @@ public class TraceFileClient extends DB {
     builder.append("='");
     builder.append(cond);
     builder.append("';");
-    this.writer.println(builder.toString());
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
   }
 
@@ -178,7 +189,8 @@ public class TraceFileClient extends DB {
       builder.append("'");
     }
     builder.append(");");
-    this.writer.println(builder.toString());
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
   }
 
@@ -196,7 +208,8 @@ public class TraceFileClient extends DB {
     builder.append("='");
     builder.append(key);
     builder.append("';");
-    this.writer.println(builder.toString());
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
   }
 
@@ -217,7 +230,8 @@ public class TraceFileClient extends DB {
     builder.append("='");
     builder.append(condition);
     builder.append("';");
-    this.writer.println(builder.toString());
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
   }
 
@@ -227,7 +241,7 @@ public class TraceFileClient extends DB {
     builder.append(table);
     builder.append(" SET ");
     for (Map.Entry<String, ByteIterator> e : values.entrySet()) {
-      builder.append(e.getKey());
+      builder.append(escapeColumn(e.getKey()));
       builder.append("='");
       builder.append(e.getValue());
       builder.append("',");
@@ -238,7 +252,8 @@ public class TraceFileClient extends DB {
     builder.append("='");
     builder.append(key);
     builder.append("';");
-    this.writer.println(builder.toString());
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
   }
 
@@ -256,7 +271,7 @@ public class TraceFileClient extends DB {
     StringBuilder builder = new StringBuilder("UPDATE ");
     builder.append(table);
     builder.append(" SET ");
-    builder.append(fieldname);
+    builder.append(escapeColumn(fieldname));
     builder.append("='");
     builder.append(metadatavalue);
     builder.append("' WHERE ");
@@ -264,28 +279,40 @@ public class TraceFileClient extends DB {
     builder.append("='");
     builder.append(condition);
     builder.append("';");
-    this.writer.println(builder.toString());
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
   }
 
   @Override
   public Status scan(String table, String startkey, int recordcount, Set<String> fields,
       Vector<HashMap<String, ByteIterator>> result) {
-    StringBuilder builder = new StringBuilder("SELECT * FROM ");
-    builder.append(this.sharding ? SCAN_VIEW : TABLE_NAME);
-    builder.append(" WHERE ");
-    builder.append(PRIMARY_KEY);
-    builder.append(">'");
-    builder.append(startkey);
-    builder.append("'");
-    if (!this.sharding) {
-      builder.append(" ORDER BY ");
-      builder.append(PRIMARY_KEY);
-    }
-    builder.append(" LIMIT ");
-    builder.append(recordcount);
-    builder.append(";");
-    this.writer.println(builder.toString());
+    // Sharded and unshared scan statements are slightley different:
+    // one looks up from a table, the other from a view.
+    StringBuilder sbuilder = new StringBuilder("SELECT * FROM ");
+    sbuilder.append(SCAN_VIEW);
+    sbuilder.append(" WHERE ");
+    sbuilder.append(PRIMARY_KEY);
+    sbuilder.append(">'");
+    sbuilder.append(startkey);
+    sbuilder.append("'");
+    sbuilder.append(" LIMIT ");
+    sbuilder.append(recordcount);
+    sbuilder.append(";");
+    this.swriter.println(sbuilder.toString());
+    StringBuilder ubuilder = new StringBuilder("SELECT * FROM ");
+    ubuilder.append(TABLE_NAME);
+    ubuilder.append(" WHERE ");
+    ubuilder.append(PRIMARY_KEY);
+    ubuilder.append(">'");
+    ubuilder.append(startkey);
+    ubuilder.append("'");
+    ubuilder.append(" ORDER BY ");
+    ubuilder.append(PRIMARY_KEY);
+    ubuilder.append(" LIMIT ");
+    ubuilder.append(recordcount);
+    ubuilder.append(";");
+    this.uwriter.println(ubuilder.toString());
     return Status.OK;
   }
 

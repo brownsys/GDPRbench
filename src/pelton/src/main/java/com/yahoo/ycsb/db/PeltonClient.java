@@ -48,6 +48,9 @@ import java.util.Vector;
 public class PeltonClient extends DB {
   /** Name of database (and DB file). */
   public static final String DB_DIR_PROPERTY = "pelton.dbdir";
+  public static final String DB_USERNAME_PROPERTY = "pelton.username";
+  public static final String DB_PASSWORD_PROPERTY = "pelton.password";
+
   /** Table schema configuration. */
   public static final String TABLE_NAME = "usertable";
   public static final String PRIMARY_KEY = "YCSB_KEY";
@@ -77,7 +80,10 @@ public class PeltonClient extends DB {
 
   public void init() throws DBException {
     Properties props = getProperties();
-    this.pelton = new PeltonJNI(props.getProperty(DB_DIR_PROPERTY));
+    String dbdir = props.getProperty(DB_DIR_PROPERTY);
+    String dbuser = props.getProperty(DB_DIR_PROPERTY);
+    String dbpass = props.getProperty(DB_PASSWORD_PROPERTY);
+    this.pelton = new PeltonJNI(dbdir, dbuser, dbpass);
 
     if (this.pelton.ExecuteDDL(CREATE_TABLE_SQL[0])) {
       for (int i = 1; i < CREATE_TABLE_SQL.length; i++) {
