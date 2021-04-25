@@ -1,6 +1,3 @@
-# trace files
-traces/
-
 # ignore compiled byte code
 target
 
