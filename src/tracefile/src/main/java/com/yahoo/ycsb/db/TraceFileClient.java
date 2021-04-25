@@ -123,7 +123,9 @@ public class TraceFileClient extends DB {
       this.uwriter.println(CREATE_TABLE_SQL_NONSHARDING);
     } else {
       this.swriter.println("# Start of benchmark");
+      this.swriter.println("# perf start");
       this.uwriter.println("# Start of benchmark");
+      this.uwriter.println("# perf start");
     }
   }
 
