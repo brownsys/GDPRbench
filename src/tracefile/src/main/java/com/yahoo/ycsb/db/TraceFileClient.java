@@ -68,8 +68,8 @@ public class TraceFileClient extends DB {
       + "CREATE TABLE usertable(YCSB_KEY VARCHAR(100) PRIMARY KEY,"
       + " `DEC` VARCHAR(100), USR VARCHAR(100), SRC VARCHAR(100), OBJ VARCHAR(100),"
       + " CAT VARCHAR(100), ACL VARCHAR(100), Data VARCHAR(100), PUR VARCHAR(100),"
-      + " SHR VARCHAR(100), TTL VARCHAR(100), FOREIGN KEY(PUR) REFERENCES main(ID));"
-      + "\n"
+      + " SHR VARCHAR(100), TTL VARCHAR(100), FOREIGN KEY(PUR) REFERENCES main(ID));\n"
+      + "CREATE INDEX pk_index ON usertable(YCSB_KEY);\n"
       + "INSERT INTO main VALUES ('PUR=ads++++++++++++++++++++++++++++++++++++++++++++"
       + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'ads');\n"
       + "INSERT INTO main VALUES ('PUR=2fa++++++++++++++++++++++++++++++++++++++++++++"
@@ -147,7 +147,7 @@ public class TraceFileClient extends DB {
     builder.append(TABLE_NAME);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append("='");
+    builder.append(" = '");
     builder.append(key);
     builder.append("';");
     this.swriter.println(builder.toString());
@@ -170,7 +170,7 @@ public class TraceFileClient extends DB {
     builder.append(TABLE_NAME);
     builder.append(" WHERE ");
     builder.append(METADATA_COLUMN);
-    builder.append("='");
+    builder.append(" = '");
     builder.append(cond);
     builder.append("';");
     this.swriter.println(builder.toString());
@@ -182,11 +182,11 @@ public class TraceFileClient extends DB {
   public Status insert(String table, String key, Map<String, ByteIterator> values) {
     StringBuilder builder = new StringBuilder("INSERT INTO ");
     builder.append(table);
-    builder.append(" VALUES('");
+    builder.append(" VALUES ('");
     builder.append(key);
     builder.append("'");
     for (String col : COLUMNS) {
-      builder.append(",'");
+      builder.append(", '");
       builder.append(values.get(col).toString());
       builder.append("'");
     }
@@ -207,7 +207,7 @@ public class TraceFileClient extends DB {
     builder.append(table);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append("='");
+    builder.append(" = '");
     builder.append(key);
     builder.append("';");
     this.swriter.println(builder.toString());
@@ -229,7 +229,7 @@ public class TraceFileClient extends DB {
     builder.append(table);
     builder.append(" WHERE ");
     builder.append(METADATA_COLUMN);
-    builder.append("='");
+    builder.append(" = '");
     builder.append(condition);
     builder.append("';");
     this.swriter.println(builder.toString());
@@ -244,14 +244,15 @@ public class TraceFileClient extends DB {
     builder.append(" SET ");
     for (Map.Entry<String, ByteIterator> e : values.entrySet()) {
       builder.append(escapeColumn(e.getKey()));
-      builder.append("='");
+      builder.append(" = '");
       builder.append(e.getValue());
-      builder.append("',");
+      builder.append("', ");
     }
+    builder.deleteCharAt(builder.length() - 1);
     builder.deleteCharAt(builder.length() - 1);
     builder.append(" WHERE ");
     builder.append(PRIMARY_KEY);
-    builder.append("='");
+    builder.append(" = '");
     builder.append(key);
     builder.append("';");
     this.swriter.println(builder.toString());
@@ -274,11 +275,11 @@ public class TraceFileClient extends DB {
     builder.append(table);
     builder.append(" SET ");
     builder.append(escapeColumn(fieldname));
-    builder.append("='");
+    builder.append(" = '");
     builder.append(metadatavalue);
     builder.append("' WHERE ");
     builder.append(METADATA_COLUMN);
-    builder.append("='");
+    builder.append(" = '");
     builder.append(condition);
     builder.append("';");
     this.swriter.println(builder.toString());
@@ -295,7 +296,7 @@ public class TraceFileClient extends DB {
     sbuilder.append(SCAN_VIEW);
     sbuilder.append(" WHERE ");
     sbuilder.append(PRIMARY_KEY);
-    sbuilder.append(">'");
+    sbuilder.append(" > '");
     sbuilder.append(startkey);
     sbuilder.append("'");
     sbuilder.append(" LIMIT ");
@@ -306,7 +307,7 @@ public class TraceFileClient extends DB {
     ubuilder.append(TABLE_NAME);
     ubuilder.append(" WHERE ");
     ubuilder.append(PRIMARY_KEY);
-    ubuilder.append(">'");
+    ubuilder.append(" > '");
     ubuilder.append(startkey);
     ubuilder.append("'");
     ubuilder.append(" ORDER BY ");
