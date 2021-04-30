@@ -159,8 +159,6 @@ LICENSE file.
     <module>orientdb</module>
     <module>rados</module>-->
     <module>redis</module>
-    <module>pelton</module>
-    <module>sqlite</module>
     <module>tracefile</module>
     <!--<module>rest</module>
     <module>riak</module>
