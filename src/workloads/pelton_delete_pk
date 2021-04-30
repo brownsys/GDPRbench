@@ -23,21 +23,34 @@
 #   Request distribution: zipfian
 
 recordcount=1000
-operationcount=10000
+operationcount=1000
 workload=com.yahoo.ycsb.workloads.GDPRWorkload
 
 readallfields=true
 writeallfields=true
 dataintegrity=true
 
-readproportion=1
-readmetaproportion=0
+purcount=5
+usrcount=30
+objcount=100
+deccount=2
+aclcount=10
+shrcount=10
+srccount=10
+catcount=10
+
+readproportion=0
+readmetapurposeproportion=0
+readmetauserproportion=0
 updateproportion=0
-updatemetaproportion=0
-deleteproportion=0
-deletemetaproportion=0
+updatemetapurposeproportion=0
+updatemetauserproportion=0
+deleteproportion=1
+deletemetapurposeproportion=0
+deletemetauserproportion=0
 scanproportion=0
 insertproportion=0
 insertorder=ordered
 
 requestdistribution=uniform
+

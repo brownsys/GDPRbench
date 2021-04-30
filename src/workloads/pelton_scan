@@ -30,12 +30,24 @@ readallfields=true
 writeallfields=true
 dataintegrity=true
 
+purcount=5
+usrcount=30
+objcount=100
+deccount=2
+aclcount=10
+shrcount=10
+srccount=10
+catcount=10
+
 readproportion=0
-readmetaproportion=0
+readmetapurposeproportion=0
+readmetauserproportion=0
 updateproportion=0
-updatemetaproportion=0
+updatemetapurposeproportion=0
+updatemetauserproportion=0
 deleteproportion=0
-deletemetaproportion=0
+deletemetapurposeproportion=0
+deletemetauserproportion=0
 scanproportion=1
 insertproportion=0
 insertorder=ordered
