@@ -22,7 +22,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -39,10 +41,13 @@ public final class JdbcDBCreateTable {
     System.out.println("  -n   name of the table.");
     System.out.println("  -f   number of fields (default 10).");
   }
+  
+  public static final List<String> COLUMNS = Arrays.asList(
+      new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
 
   private static void createTable(Properties props, String tablename) throws SQLException {
     String driver = props.getProperty(JdbcDBClient.DRIVER_CLASS);
-    String username = props.getProperty(JdbcDBClient.CONNECTION_USER);
+    String username = props.getProperty(JdbcDBClient.CONNECTION_USER, "");
     String password = props.getProperty(JdbcDBClient.CONNECTION_PASSWD, "");
     String url = props.getProperty(JdbcDBClient.CONNECTION_URL);
     int fieldcount = Integer.parseInt(props.getProperty(JdbcDBClient.FIELD_COUNT_PROPERTY,
@@ -50,6 +55,9 @@ public final class JdbcDBCreateTable {
 
     if (driver == null || username == null || url == null) {
       throw new SQLException("Missing connection information.");
+    }
+    if (fieldcount != COLUMNS.size()) {
+      throw new SQLException("Unsupported number of columns");
     }
 
     Connection conn = null;
@@ -70,9 +78,9 @@ public final class JdbcDBCreateTable {
       sql.append(tablename);
       sql.append(" (YCSB_KEY VARCHAR PRIMARY KEY");
 
-      for (int idx = 0; idx < fieldcount; idx++) {
-        sql.append(", FIELD");
-        sql.append(idx);
+      for (String column : COLUMNS) {
+        sql.append(",");
+        sql.append(column);
         sql.append(" TEXT");
       }
       sql.append(");");
