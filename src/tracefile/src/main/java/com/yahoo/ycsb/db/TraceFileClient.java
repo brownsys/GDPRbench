@@ -51,40 +51,34 @@ public class TraceFileClient extends DB {
   /** Table schema configuration. */
   public static final String TABLE_NAME = "usertable";
   public static final String PRIMARY_KEY = "YCSB_KEY";
-  public static final String METADATA_COLUMN = "PUR";
-  public static final String SCAN_VIEW = "scan_view";
+  public static final String SCAN_VIEW = "sview";
+  public static final String PUR_VIEW = "pview";
 
   /** SQL for table creation. */
-  public static final String CREATE_TABLE_SQL_NONSHARDING =
+  public static final String UNSHARDED_SCHEMA =
       "CREATE TABLE usertable(YCSB_KEY VARCHAR(100) PRIMARY KEY,"
       + " `DEC` VARCHAR(100), USR VARCHAR(100), SRC VARCHAR(100), OBJ VARCHAR(100),"
       + " CAT VARCHAR(100), ACL VARCHAR(100), Data VARCHAR(100), PUR VARCHAR(100),"
-      + " SHR VARCHAR(100), TTL VARCHAR(100)) ENGINE MEMORY;"
-      + "\n"
-      + "CREATE INDEX pur_index ON usertable(PUR);\n";
+      + " SHR VARCHAR(100), TTL VARCHAR(100)) ENGINE MEMORY;\n"
+      + "CREATE INDEX usr_index ON usertable(USR);";
 
-  public static final String CREATE_TABLE_SQL_SHARDING =
-      "CREATE TABLE main(ID VARCHAR(100) PRIMARY KEY, PII_attr VARCHAR(100));\n"
+  public static final String SHARDED_SCHEMA =
+      "CREATE TABLE main(PII_usr VARCHAR(100) PRIMARY KEY);\n"
       + "CREATE TABLE usertable(YCSB_KEY VARCHAR(100) PRIMARY KEY,"
       + " `DEC` VARCHAR(100), USR VARCHAR(100), SRC VARCHAR(100), OBJ VARCHAR(100),"
       + " CAT VARCHAR(100), ACL VARCHAR(100), Data VARCHAR(100), PUR VARCHAR(100),"
-      + " SHR VARCHAR(100), TTL VARCHAR(100), FOREIGN KEY(PUR) REFERENCES main(ID));\n"
+      + " SHR VARCHAR(100), TTL VARCHAR(100), FOREIGN KEY(USR) REFERENCES main(ID));\n"
       + "CREATE INDEX pk_index ON usertable(YCSB_KEY);\n"
-      + "INSERT INTO main VALUES ('PUR=ads++++++++++++++++++++++++++++++++++++++++++++"
-      + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'ads');\n"
-      + "INSERT INTO main VALUES ('PUR=2fa++++++++++++++++++++++++++++++++++++++++++++"
-      + "+++++++++++++++++++++++++++++++++++++++++++++++++', '2fa');\n"
-      + "INSERT INTO main VALUES ('PUR=msg++++++++++++++++++++++++++++++++++++++++++++"
-      + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'msg');\n"
-      + "INSERT INTO main VALUES ('PUR=backup+++++++++++++++++++++++++++++++++++++++++"
-      + "+++++++++++++++++++++++++++++++++++++++++++++++++', 'backup');";
-
-  public static final String CREATE_VIEW_SQL_SHARDING =
-      "CREATE VIEW scan_view AS "
-      + "'\"SELECT * FROM usertable ORDER BY YCSB_KEY LIMIT ?\"';";
+      + "CREATE VIEW sview AS '\"SELECT * FROM usertable ORDER BY YCSB_KEY LIMIT ?\"';\n"
+      + "CREATE VIEW pview AS '\"SELECT * FROM usertable WHERE PUR = ?\"';";
   
   public static final List<String> COLUMNS = Arrays.asList(
       new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
+
+  public static boolean isUsr(int fieldnum) {
+    assert fieldnum == 0 || fieldnum == 2;  // 0 is PUR.
+    return fieldnum == 2;
+  }
 
   public static String escapeColumn(String colname) {
     if (colname.equalsIgnoreCase("DEC")) {
@@ -93,6 +87,7 @@ public class TraceFileClient extends DB {
     return colname;
   }
 
+  /* Files and writers for sharded and unsharded tracefile */
   private FileWriter sfile;
   private PrintWriter swriter;
   private FileWriter ufile;
@@ -117,10 +112,9 @@ public class TraceFileClient extends DB {
     
     if (!this.append) {
       // Sharded schema creation.
-      this.swriter.println(CREATE_TABLE_SQL_SHARDING);
-      this.swriter.println(CREATE_VIEW_SQL_SHARDING);
+      this.swriter.println(SHARDED_SCHEMA);
       // Unsharded schema creation.
-      this.uwriter.println(CREATE_TABLE_SQL_NONSHARDING);
+      this.uwriter.println(UNSHARDED_SCHEMA);
     } else {
       this.swriter.println("# Start of benchmark");
       this.swriter.println("# perf start");
@@ -143,6 +137,7 @@ public class TraceFileClient extends DB {
   @Override
   public Status read(String table, String key, Set<String> fields,
       Map<String, ByteIterator> result) {
+    assert fields.containsAll(COLUMNS) && COLUMNS.containsAll(fields);
     StringBuilder builder = new StringBuilder("SELECT * FROM ");
     builder.append(TABLE_NAME);
     builder.append(" WHERE ");
@@ -156,141 +151,35 @@ public class TraceFileClient extends DB {
   }
 
   @Override
-  public Status readMeta(String table, String cond, String keymatch,
+  public Status readMeta(String table, int fieldnum, String cond, String keymatch,
       Vector<HashMap<String, ByteIterator>> result) {
-    if (!keymatch.equals("user*")) {
-      System.out.println("Update meta error " + keymatch);
+    if (!keymatch.equals("key*")) {
+      System.out.println("Read meta error " + keymatch);
       return Status.ERROR;
     }
-    if (!cond.startsWith(METADATA_COLUMN)) {
-      System.out.println("Update meta condition error " + cond);
-      return Status.ERROR;
+    if (isUsr(fieldnum)) {
+      StringBuilder builder = new StringBuilder("SELECT * FROM ");
+      builder.append(TABLE_NAME);
+      builder.append(" WHERE USR = '" + cond + "';");
+      this.swriter.println(builder.toString());
+      this.uwriter.println(builder.toString());
+    } else {
+      StringBuilder sbuilder = new StringBuilder("SELECT * FROM ");
+      sbuilder.append(PUR_VIEW);
+      sbuilder.append(" WHERE PUR = '" + cond + "';");
+      this.swriter.println(sbuilder.toString());
+      StringBuilder ubuilder = new StringBuilder("SELECT * FROM ");
+      ubuilder.append(TABLE_NAME);
+      ubuilder.append(" WHERE PUR = '" + cond + "';");
+      this.uwriter.println(ubuilder.toString());
     }
-    StringBuilder builder = new StringBuilder("SELECT * FROM ");
-    builder.append(TABLE_NAME);
-    builder.append(" WHERE ");
-    builder.append(METADATA_COLUMN);
-    builder.append(" = '");
-    builder.append(cond);
-    builder.append("';");
-    this.swriter.println(builder.toString());
-    this.uwriter.println(builder.toString());
     return Status.OK;
   }
-
-  @Override
-  public Status insert(String table, String key, Map<String, ByteIterator> values) {
-    StringBuilder builder = new StringBuilder("INSERT INTO ");
-    builder.append(table);
-    builder.append(" VALUES ('");
-    builder.append(key);
-    builder.append("'");
-    for (String col : COLUMNS) {
-      builder.append(", '");
-      builder.append(values.get(col).toString());
-      builder.append("'");
-    }
-    builder.append(");");
-    this.swriter.println(builder.toString());
-    this.uwriter.println(builder.toString());
-    return Status.OK;
-  }
-
-  @Override
-  public Status insertTTL(String table, String key, Map<String, ByteIterator> values, int ttl) {
-    return this.insert(table, key, values);
-  }
-
-  @Override
-  public Status delete(String table, String key) {
-    StringBuilder builder = new StringBuilder("DELETE FROM ");
-    builder.append(table);
-    builder.append(" WHERE ");
-    builder.append(PRIMARY_KEY);
-    builder.append(" = '");
-    builder.append(key);
-    builder.append("';");
-    this.swriter.println(builder.toString());
-    this.uwriter.println(builder.toString());
-    return Status.OK;
-  }
-
-  @Override
-  public Status deleteMeta(String table, String condition, String keymatch) {
-    if (!keymatch.equals("user*")) {
-      System.out.println("Update meta error " + keymatch);
-      return Status.ERROR;
-    }
-    if (!condition.startsWith(METADATA_COLUMN)) {
-      System.out.println("Update meta condition error " + condition);
-      return Status.ERROR;
-    }
-    StringBuilder builder = new StringBuilder("DELETE FROM ");
-    builder.append(table);
-    builder.append(" WHERE ");
-    builder.append(METADATA_COLUMN);
-    builder.append(" = '");
-    builder.append(condition);
-    builder.append("';");
-    this.swriter.println(builder.toString());
-    this.uwriter.println(builder.toString());
-    return Status.OK;
-  }
-
-  @Override
-  public Status update(String table, String key, Map<String, ByteIterator> values) {
-    StringBuilder builder = new StringBuilder("UPDATE ");
-    builder.append(table);
-    builder.append(" SET ");
-    for (Map.Entry<String, ByteIterator> e : values.entrySet()) {
-      builder.append(escapeColumn(e.getKey()));
-      builder.append(" = '");
-      builder.append(e.getValue());
-      builder.append("', ");
-    }
-    builder.deleteCharAt(builder.length() - 1);
-    builder.deleteCharAt(builder.length() - 1);
-    builder.append(" WHERE ");
-    builder.append(PRIMARY_KEY);
-    builder.append(" = '");
-    builder.append(key);
-    builder.append("';");
-    this.swriter.println(builder.toString());
-    this.uwriter.println(builder.toString());
-    return Status.OK;
-  }
-
-  @Override
-  public Status updateMeta(String table, String condition, String keymatch, String fieldname,
-      String metadatavalue) {
-    if (!keymatch.equals("user*")) {
-      System.out.println("Update meta error " + keymatch);
-      return Status.ERROR;
-    }
-    if (!condition.startsWith(METADATA_COLUMN)) {
-      System.out.println("Update meta condition error " + condition);
-      return Status.ERROR;
-    }
-    StringBuilder builder = new StringBuilder("UPDATE ");
-    builder.append(table);
-    builder.append(" SET ");
-    builder.append(escapeColumn(fieldname));
-    builder.append(" = '");
-    builder.append(metadatavalue);
-    builder.append("' WHERE ");
-    builder.append(METADATA_COLUMN);
-    builder.append(" = '");
-    builder.append(condition);
-    builder.append("';");
-    this.swriter.println(builder.toString());
-    this.uwriter.println(builder.toString());
-    return Status.OK;
-  }
-
+  
   @Override
   public Status scan(String table, String startkey, int recordcount, Set<String> fields,
       Vector<HashMap<String, ByteIterator>> result) {
-    // Sharded and unshared scan statements are slightley different:
+    // Sharded and unshared scan statements are slightly different:
     // one looks up from a table, the other from a view.
     StringBuilder sbuilder = new StringBuilder("SELECT * FROM ");
     sbuilder.append(SCAN_VIEW);
@@ -320,12 +209,118 @@ public class TraceFileClient extends DB {
   }
 
   @Override
-  public Status verifyTTL(String table, long recordcount) {
+  public Status insert(String table, String key, Map<String, ByteIterator> values) {
+    StringBuilder builder = new StringBuilder("INSERT INTO ");
+    builder.append(TABLE_NAME);
+    builder.append(" VALUES ('");
+    builder.append(key);
+    builder.append("'");
+    for (String col : COLUMNS) {
+      builder.append(", '");
+      builder.append(values.get(col).toString());
+      builder.append("'");
+    }
+    builder.append(");");
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
   }
 
   @Override
-  public Status readLog(String table, int logcount) {
+  public Status delete(String table, String key) {
+    StringBuilder builder = new StringBuilder("DELETE FROM ");
+    builder.append(table);
+    builder.append(" WHERE ");
+    builder.append(PRIMARY_KEY);
+    builder.append(" = '");
+    builder.append(key);
+    builder.append("';");
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
     return Status.OK;
+  }
+
+  @Override
+  public Status deleteMeta(String table, int fieldnum, String cond, String keymatch) {
+    if (!keymatch.equals("key*")) {
+      System.out.println("Delete meta error " + keymatch);
+      return Status.ERROR;
+    }
+    
+    String columnName = isUsr(fieldnum) ? "USR" : "PUR";
+    StringBuilder builder = new StringBuilder("DELETE FROM ");
+    builder.append(TABLE_NAME);
+    builder.append(" WHERE ");
+    builder.append(columnName);
+    builder.append(" = '" + cond + "';");
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
+    return Status.OK;
+  }
+
+  @Override
+  public Status update(String table, String key, Map<String, ByteIterator> values) {
+    String value = key;
+    value += "-" + (int) (Integer.MAX_VALUE * Math.random());
+    value += "-" + (int) (Integer.MAX_VALUE * Math.random());
+    value += "-" + (int) (Integer.MAX_VALUE * Math.random());
+    value += "-" + (int) (Integer.MAX_VALUE * Math.random());
+
+    StringBuilder builder = new StringBuilder("UPDATE ");
+    builder.append(TABLE_NAME);
+    builder.append(" SET ");
+    builder.append("Data = '" + value + "'");
+    builder.append(" WHERE ");
+    builder.append(PRIMARY_KEY);
+    builder.append(" = '");
+    builder.append(key);
+    builder.append("';");
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
+    return Status.OK;
+  }
+
+  @Override
+  public Status updateMeta(String table, int fieldnum, String cond, String keymatch,
+      String fieldkey, String fieldvalue) {
+    if (!keymatch.equals("key*")) {
+      System.out.println("Read meta error " + keymatch);
+      return Status.ERROR;
+    }
+
+    String columnName = isUsr(fieldnum) ? "USR" : "PUR";
+    String value = "" + (int) (Integer.MAX_VALUE * Math.random());
+    value += "-" + (int) (Integer.MAX_VALUE * Math.random());
+    value += "-" + (int) (Integer.MAX_VALUE * Math.random());
+    value += "-" + (int) (Integer.MAX_VALUE * Math.random());
+    value += "-" + (int) (Integer.MAX_VALUE * Math.random());
+
+    StringBuilder builder = new StringBuilder("UPDATE ");
+    builder.append(TABLE_NAME);
+    builder.append(" SET ");
+    builder.append("Data = '" + value + "'");
+    builder.append(" WHERE ");
+    builder.append(columnName);
+    builder.append(" = '");
+    builder.append(cond);
+    builder.append("';");
+    this.swriter.println(builder.toString());
+    this.uwriter.println(builder.toString());
+    return Status.OK;
+  }
+
+  @Override
+  public Status insertTTL(String table, String key, Map<String, ByteIterator> values, int ttl) {
+    return this.insert(table, key, values);
+  }
+  
+  @Override
+  public Status verifyTTL(String table, long recordcount) {
+    return Status.NOT_IMPLEMENTED;
+  }
+
+  @Override
+  public Status readLog(String table, int logcount) {
+    return Status.NOT_IMPLEMENTED;
   }
 }
