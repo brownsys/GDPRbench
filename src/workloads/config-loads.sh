@@ -22,5 +22,3 @@ sed -i "s+recordcount=[0-9]*+recordcount=$UPDATEDBSIZE+g" pelton_update*
 
 sed -i "s+operationcount=[0-9]*+operationcount=$DELETEOPCOUNT+g" pelton_delete*
 sed -i "s+recordcount=[0-9]*+recordcount=$DELETEDBSIZE+g" pelton_delete*
-
-

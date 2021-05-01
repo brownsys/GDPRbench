@@ -5,22 +5,29 @@
 #          traces/pelton_<suffix>.sql and traces/mysql_<suffix>.sql
 
 echo "Don't forget to run 'mvn package' after changes!"
+TYPE="pelton"  # could also be gdpr
 
 if [[ "$1" == "" ]]; then
-  ./run-tracefile.sh all
-  ./run-tracefile.sh select_pk
-  ./run-tracefile.sh select_pur
-  ./run-tracefile.sh select_usr
-  ./run-tracefile.sh scan
-  ./run-tracefile.sh insert
-  ./run-tracefile.sh update_pk
-  ./run-tracefile.sh update_pur
-  ./run-tracefile.sh update_usr
-  ./run-tracefile.sh delete_pk
-  ./run-tracefile.sh delete_pur
-  ./run-tracefile.sh delete_usr
+  if [[ $TYPE == "pelton" ]]; then
+    ./run-tracefile.sh all
+    ./run-tracefile.sh select_pk
+    ./run-tracefile.sh select_pur
+    ./run-tracefile.sh select_usr
+    ./run-tracefile.sh scan
+    ./run-tracefile.sh insert
+    ./run-tracefile.sh update_pk
+    ./run-tracefile.sh update_pur
+    ./run-tracefile.sh update_usr
+    ./run-tracefile.sh delete_pk
+    ./run-tracefile.sh delete_pur
+    ./run-tracefile.sh delete_usr
+  else
+    ./run-tracefile.sh controller
+    ./run-tracefile.sh customer
+    ./run-tracefile.sh processor
+  fi
 else
-  LOAD_CONF="workloads/pelton_$1"
+  LOAD_CONF="workloads/${TYPE}_$1"
   SFILE_NAME="traces/pelton_$1.sql"
   UFILE_NAME="traces/mysql_$1.sql"
 
