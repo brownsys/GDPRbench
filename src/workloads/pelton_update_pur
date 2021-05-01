@@ -31,7 +31,7 @@ writeallfields=true
 dataintegrity=true
 
 purcount=5
-usrcount=100
+usrcount=1000
 objcount=100
 deccount=2
 aclcount=10
