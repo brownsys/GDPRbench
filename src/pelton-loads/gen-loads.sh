@@ -48,7 +48,7 @@ while read -r input; do
     USRCOUNT=$DEFAULT_USRCOUNT
   fi
 
-  echo "Override record count? "
+  echo "> Override record count? "
   read -r RECORDCOUNT;
   if [[ "$RECORDCOUNT" == "" ]]; then
     RECORDCOUNT=$DEFAULT_RECORDCOUNT
