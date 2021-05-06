@@ -44,6 +44,8 @@ import java.util.Vector;
  * YCSB binding for dumping to a trace file.
  */
 public class TraceFileClient extends DB {
+  public static final int NUM_USERS = 1000;
+
   /** Name of database (and DB file). */
   public static final String SHARDED_FILE_PATH_PROPERTY = "sharded.path";
   public static final String UNSHARDED_FILE_PATH_PROPERTY = "unsharded.path";
@@ -289,6 +291,11 @@ public class TraceFileClient extends DB {
       return Status.ERROR;
     }
 
+    // This is only used in the controller load where everything is uniform.
+    // Similarly, we will uniformly select a user here.
+    int i = (int) (Math.random() * NUM_USERS);
+    String usr = "user" + (i + 1);
+
     String columnName = isUsr(fieldnum) ? "USR" : "PUR";
     String value = "" + (int) (Integer.MAX_VALUE * Math.random());
     value += "-" + (int) (Integer.MAX_VALUE * Math.random());
@@ -304,6 +311,9 @@ public class TraceFileClient extends DB {
     builder.append(columnName);
     builder.append(" = '");
     builder.append(cond);
+    builder.append("' AND ");
+    builder.append("USR = '");
+    builder.append(usr);
     builder.append("';");
     this.swriter.println(builder.toString());
     this.uwriter.println(builder.toString());

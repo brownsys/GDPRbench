@@ -5,7 +5,7 @@
 #          traces/pelton_<suffix>.sql and traces/mysql_<suffix>.sql
 
 echo "Don't forget to run 'mvn package' after changes!"
-TYPE="pelton"  # could also be gdpr
+TYPE="gdpr"  # could also be gdpr
 
 if [[ "$1" == "" ]]; then
   if [[ $TYPE == "pelton" ]]; then
@@ -27,7 +27,7 @@ if [[ "$1" == "" ]]; then
     ./run-tracefile.sh processor
   fi
 else
-  LOAD_CONF="workloads/${TYPE}_$1"
+  LOAD_CONF="gdpr-loads/${TYPE}_$1"
   SFILE_NAME="traces/pelton_$1.sql"
   UFILE_NAME="traces/mysql_$1.sql"
 
