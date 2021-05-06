@@ -311,9 +311,11 @@ public class TraceFileClient extends DB {
     builder.append(columnName);
     builder.append(" = '");
     builder.append(cond);
-    builder.append("' AND ");
-    builder.append("USR = '");
-    builder.append(usr);
+    if (!isUsr(fieldnum)) {
+      builder.append("' AND ");
+      builder.append("USR = '");
+      builder.append(usr);
+    }
     builder.append("';");
     this.swriter.println(builder.toString());
     this.uwriter.println(builder.toString());
