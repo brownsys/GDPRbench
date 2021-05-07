@@ -50,6 +50,7 @@ public class TraceFileClient extends DB {
   public static final String SHARDED_FILE_PATH_PROPERTY = "sharded.path";
   public static final String UNSHARDED_FILE_PATH_PROPERTY = "unsharded.path";
   public static final String APPEND_PROPERTY = "file.append";
+  public static final String ORDER_PROPERTY = "sharded.order";
   /** Table schema configuration. */
   public static final String TABLE_NAME = "usertable";
   public static final String PRIMARY_KEY = "YCSB_KEY";
@@ -72,8 +73,10 @@ public class TraceFileClient extends DB {
       + " CAT VARCHAR(100), ACL VARCHAR(100), Data VARCHAR(100), PUR VARCHAR(100),"
       + " SHR VARCHAR(100), TTL VARCHAR(100), FOREIGN KEY(USR) REFERENCES main(ID));\n"
       + "CREATE INDEX pk_index ON usertable(YCSB_KEY);\n"
-      + "CREATE VIEW sview AS '\"SELECT * FROM usertable ORDER BY YCSB_KEY LIMIT ?\"';\n"
       + "CREATE VIEW pview AS '\"SELECT * FROM usertable WHERE PUR = ?\"';";
+      
+  public static final String SHARDED_SCHEMA_ORDER =
+      "CREATE VIEW sview AS '\"SELECT * FROM usertable ORDER BY YCSB_KEY LIMIT ?\"';\n";
   
   public static final List<String> COLUMNS = Arrays.asList(
       new String[] {"DEC", "USR", "SRC", "OBJ", "CAT", "ACL", "Data", "PUR", "SHR", "TTL"});
@@ -96,14 +99,17 @@ public class TraceFileClient extends DB {
   private FileWriter ufile;
   private PrintWriter uwriter;
   private boolean append;
+  private boolean withOrder;
 
   public void init() throws DBException {
     Properties props = getProperties();
     String sfilePath = props.getProperty(SHARDED_FILE_PATH_PROPERTY);
     String ufilePath = props.getProperty(UNSHARDED_FILE_PATH_PROPERTY);
     String fileAppend = props.getProperty(APPEND_PROPERTY, "no");
+    String withOrderStr = props.getProperty(ORDER_PROPERTY, "yes");
 
     try {
+      this.withOrder = withOrderStr.equalsIgnoreCase("yes");
       this.append = fileAppend.equalsIgnoreCase("yes");
       this.sfile = new FileWriter(sfilePath, this.append);
       this.swriter = new PrintWriter(this.sfile);
@@ -116,6 +122,9 @@ public class TraceFileClient extends DB {
     if (!this.append) {
       // Sharded schema creation.
       this.swriter.println(SHARDED_SCHEMA);
+      if (this.withOrder) {
+        this.swriter.println(SHARDED_SCHEMA_ORDER);
+      }
       // Unsharded schema creation.
       this.uwriter.println(UNSHARDED_SCHEMA);
     } else {
